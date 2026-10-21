@@ -2,14 +2,17 @@
 # End-to-end smoke test of the command-line pipeline on a small synthetic file:
 # run, resume a finished run, reanalyze, and detail. Usage:
 #
-#   tools/pipeline_smoke.sh path/to/wfo-gpu [work-dir]
+#   tools/pipeline_smoke.sh path/to/wfo-gpu [work-dir] [device]
 #
 # Floors are relaxed so the screen keeps strategies and the walk-forward
-# stage has something to do. Exits non-zero on the first failed check.
+# stage has something to do. The device defaults to native; pass opencl-cpu or
+# gpu to run the same checks on an OpenCL device. Exits non-zero on the first
+# failed check.
 set -euo pipefail
 
 exe=$1
 work=${2:-$(mktemp -d)}
+device=${3:-native}
 mkdir -p "$work"
 cd "$work"
 
@@ -18,7 +21,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 "$exe" --version
 "$exe" generate --out bars.bin --days 45 --seed 11 --trend 0.03 > /dev/null
 
-cat > smoke.toml <<'EOF'
+cat > smoke.toml <<EOF
 [data]
 bars = "bars.bin"
 output = "out"
@@ -35,7 +38,7 @@ min_annual_roc = -1000.0
 max_negative_years = 10
 
 [compute]
-device = "native"
+device = "$device"
 EOF
 
 "$exe" run --config smoke.toml > run.log 2>&1 || { cat run.log; fail "run"; }

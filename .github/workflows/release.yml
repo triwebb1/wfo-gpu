@@ -1,8 +1,11 @@
 name: Release
 
+# A v* tag builds, tests and publishes the packages. Running the workflow by
+# hand builds and tests them and keeps them as workflow artifacts only.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,6 +23,8 @@ jobs:
           - os: windows-latest
             name: windows-x64
             exe: wfo-gpu.exe
+    env:
+      PKG: wfo-gpu-${{ github.ref_type == 'tag' && github.ref_name || 'snapshot' }}-${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +57,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          out=wfo-gpu-${GITHUB_REF_NAME}-${{ matrix.name }}
+          out=$PKG
           mkdir -p "$out/config"
           for f in build/${{ matrix.exe }} build/Release/${{ matrix.exe }} \
                    build/wfo-gpu-bench* build/Release/wfo-gpu-bench*; do
@@ -67,8 +72,47 @@ jobs:
           else
             tar czf "$out.tar.gz" "$out"
           fi
+          ls -l "$out"
+
+      # Test the archive as a user receives it: unpacked into a fresh directory,
+      # away from the build tree. The runners have no OpenCL device, so this
+      # first run also checks the fallback to the native engine.
+      - name: Test the package (native engine)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpacked"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z x "$PKG.zip" -o"$RUNNER_TEMP/unpacked" > /dev/null
+          else
+            tar xzf "$PKG.tar.gz" -C "$RUNNER_TEMP/unpacked"
+            ldd "$RUNNER_TEMP/unpacked/$PKG/${{ matrix.exe }}"
+          fi
+          exe="$RUNNER_TEMP/unpacked/$PKG/${{ matrix.exe }}"
+          "$exe" info
+          bash tools/pipeline_smoke.sh "$exe" "$RUNNER_TEMP/smoke-native" native
+
+      # On Linux, POCL provides a CPU OpenCL device, so the packaged binary can
+      # also be checked loading the system OpenCL runtime and running its kernels.
+      - name: Test the package (OpenCL on POCL)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get install -y --no-install-recommends pocl-opencl-icd
+          exe="$RUNNER_TEMP/unpacked/$PKG/${{ matrix.exe }}"
+          "$exe" info | tee info.log
+          grep -q "opencl device .*MB free" info.log
+          bash tools/pipeline_smoke.sh "$exe" "$RUNNER_TEMP/smoke-opencl" opencl-cpu
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG }}
+          path: |
+            wfo-gpu-*.zip
+            wfo-gpu-*.tar.gz
+          retention-days: 7
 
       - uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
           files: |
             wfo-gpu-*.zip
