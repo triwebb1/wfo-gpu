@@ -40,7 +40,7 @@ bool write_bar_file(const std::string& path, const std::string& symbol, int time
     std::memcpy(hdr.magic, "WFBT", 4);
     hdr.version   = 1;
     hdr.bar_count = static_cast<uint32_t>(bars.size());
-    std::strncpy(hdr.symbol, symbol.c_str(), sizeof(hdr.symbol));
+    std::memcpy(hdr.symbol, symbol.data(), std::min(symbol.size(), sizeof(hdr.symbol)));
     hdr.timeframe_sec = static_cast<uint32_t>(timeframe_sec);
     hdr.start_ts      = bars.front().timestamp;
     hdr.end_ts        = bars.back().timestamp;

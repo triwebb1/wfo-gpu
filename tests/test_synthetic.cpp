@@ -87,7 +87,9 @@ TEST(Synthetic, BarsAreWellFormed) {
             const double ticks = px / cfg.tick_size;
             ASSERT_NEAR(ticks, std::round(ticks), 1e-6) << "price off the tick grid at " << i;
         }
-        if (i > 0) ASSERT_GT(b.timestamp, bars[i - 1].timestamp) << i;
+        if (i > 0) {
+            ASSERT_GT(b.timestamp, bars[i - 1].timestamp) << i;
+        }
     }
 }
 
@@ -107,8 +109,12 @@ TEST(Synthetic, UsFuturesCalendarLayout) {
         const int     wd    = civil::weekday_from_days(civil::floor_div(local, 86400));
         ASSERT_FALSE(tod >= 17 * 3600 && tod < 18 * 3600) << "bar inside the daily break";
         ASSERT_NE(wd, 6) << "bar on Saturday";
-        if (wd == 5) ASSERT_LT(tod, 17 * 3600) << "bar after Friday close";
-        if (wd == 0) ASSERT_GE(tod, 18 * 3600) << "bar before Sunday open";
+        if (wd == 5) {
+            ASSERT_LT(tod, 17 * 3600) << "bar after Friday close";
+        }
+        if (wd == 0) {
+            ASSERT_GE(tod, 18 * 3600) << "bar before Sunday open";
+        }
     }
 
     const std::string path = temp_path("wfo_gpu_synth_us.bin");

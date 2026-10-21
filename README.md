@@ -206,8 +206,6 @@ I developed wfo-gpu using spec-driven development. Before implementation, I wrot
 
 That verification identified a real defect during development. A random-walk run that appeared profitable out of sample led to [the full-pipeline lookahead test](tests/test_lookahead.cpp), which traced the cause to session-feature gates that compared clock times across the overnight session boundary.
 
-triwebb1
-
 ## License
 
 [MIT](LICENSE)

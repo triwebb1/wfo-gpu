@@ -1120,12 +1120,16 @@ TEST(StrategyGrid, NeighborsRespectAxisBoundaries) {
     const int64_t k2_start = 6LL * 4 * StrategyGrid::PER_WEIGHT;
     // First strategy of a k = 2 subset: weight rank 0, so no -1 weight step.
     for (const auto& [axis, nb] : grid.neighbors(k2_start)) {
-        if (axis == 5) EXPECT_GT(nb, k2_start);
+        if (axis == 5) {
+            EXPECT_GT(nb, k2_start);
+        }
     }
     // Last weight rank (15) of the same subset: no +1 weight step.
     const int64_t last = k2_start + 15 * StrategyGrid::PER_WEIGHT;
     for (const auto& [axis, nb] : grid.neighbors(last)) {
-        if (axis == 5) EXPECT_LT(nb, last);
+        if (axis == 5) {
+            EXPECT_LT(nb, last);
+        }
     }
     EXPECT_EQ(grid.subset_size_at(0), 1);
     EXPECT_EQ(grid.subset_size_at(k2_start - 1), 1);

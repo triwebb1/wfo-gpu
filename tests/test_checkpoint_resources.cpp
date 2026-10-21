@@ -457,7 +457,9 @@ TEST(ResourceMonitorTest, DefaultLimits) {
     ResourceMonitor::set_default_limits(saved);
 
     // Environment overrides (WFO_GPU_MAX_*) take precedence when present.
-    if (std::getenv("WFO_GPU_MAX_RAM_GB") == nullptr) EXPECT_FLOAT_EQ(limited.max_ram_gb(), 8.0f);
+    if (std::getenv("WFO_GPU_MAX_RAM_GB") == nullptr) {
+        EXPECT_FLOAT_EQ(limited.max_ram_gb(), 8.0f);
+    }
     if (std::getenv("WFO_GPU_MAX_CPU_PCT") == nullptr) {
         EXPECT_FLOAT_EQ(limited.max_cpu_pct(), 25.0f);
         const int hw = ResourceMonitor::hardware_concurrency();

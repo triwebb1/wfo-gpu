@@ -93,8 +93,14 @@ struct IndicatorSetKey {
     for (int i = 0; i < sc.num_indicators; ++i) {
         key.indices[i] = sc.indicator_indices[i];
     }
-    // Sort the active indices ascending for canonical representation
-    std::sort(key.indices, key.indices + key.count);
+    // Sort the active indices ascending for canonical representation. An insertion
+    // sort over at most four entries; std::sort here trips GCC's -Warray-bounds.
+    for (int i = 1; i < key.count; ++i) {
+        const int v = key.indices[i];
+        int       j = i - 1;
+        for (; j >= 0 && key.indices[j] > v; --j) key.indices[j + 1] = key.indices[j];
+        key.indices[j + 1] = v;
+    }
     return key;
 }
 
