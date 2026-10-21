@@ -1,0 +1,22 @@
+# Build trees
+/build*/
+/out/
+CMakeUserPresets.json
+
+# Generated data and run output
+/data/
+/output/
+*.wfck
+*.lock
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

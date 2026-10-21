@@ -1,0 +1,46 @@
+# Quick-start config: synthetic E-mini-like bars produced by
+#   wfo-gpu generate --out data/random_walk.bin --days 260
+# Keys left out take their built-in defaults (src/config.h); an omitted
+# [instrument] section means E-mini costs. When [instrument] is present,
+# tick_size and tick_value are required.
+
+[data]
+bars = "data/random_walk.bin" # binary bar file (docs/DATA_FORMAT.md)
+output = "output/example"     # results, checkpoints and logs go here
+
+[instrument]
+symbol = "SYN"
+tick_size = 0.25              # minimum price increment, in price units
+tick_value = 12.50            # currency value of one tick per contract
+# point_value defaults to tick_value / tick_size (50.0 here)
+spread_ticks = 2              # round-trip bid/ask spread, in ticks
+slippage_ticks = 1.0          # extra slippage per side, in ticks
+capital = 100000              # return-on-capital denominator; here the contract's notional value
+
+[session]
+model = "us_futures"          # 18:00-17:00 US Eastern, flat at the close
+
+[screen]
+# Range for the broad parameter screen: bar indices or UTC dates.
+# Walk-forward in-sample windows may reach back into this range, but
+# out-of-sample trading starts at `end`.
+start = 0
+end = 60000                   # about 22 sessions; walk-forward trades only after this bar
+max_strategies = 308640       # every distinct single-signal strategy; raise to add pairs
+robustness_floor = 0.5        # minimum neighborhood stability to keep a strategy
+entry_lag = 1                 # signal on bar N fills at the open of bar N + entry_lag
+
+[floors]
+# Sanity floors a strategy must clear in the screen.
+min_trades = 100
+min_profit_factor = 1.0
+min_annual_roc = 0.0          # percent per year on capital
+max_negative_years = 0
+
+[compute]
+device = "auto"               # auto | gpu | opencl-cpu | native
+indicators_on_device = false  # true: also compute indicators on the device (faster on
+                              # very large files; results may then differ by device)
+
+[resources]
+max_cpu_pct = 100             # share of logical cores the worker pools may use

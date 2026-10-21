@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x64
+            exe: wfo-gpu
+          - os: windows-latest
+            name: windows-x64
+            exe: wfo-gpu.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenCL loader and headers (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ocl-icd-opencl-dev opencl-headers
+
+      - name: Install OpenCL loader and headers (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install opencl:x64-windows
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          -DWFO_GPU_BUILD_TESTS=OFF -DWFO_GPU_BUILD_EXAMPLES=OFF
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          -DWFO_GPU_BUILD_TESTS=OFF -DWFO_GPU_BUILD_EXAMPLES=OFF
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: bash
+        run: |
+          out=wfo-gpu-${GITHUB_REF_NAME}-${{ matrix.name }}
+          mkdir -p "$out/config"
+          for f in build/${{ matrix.exe }} build/Release/${{ matrix.exe }} \
+                   build/wfo-gpu-bench* build/Release/wfo-gpu-bench*; do
+            [ -f "$f" ] && cp "$f" "$out/"
+          done
+          cp config/*.toml config/*.csv "$out/config/"
+          # The OpenCL loader DLL ships beside the Windows executable.
+          for f in build/Release/OpenCL.dll build/OpenCL.dll; do [ -f "$f" ] && cp "$f" "$out/"; done
+          cp LICENSE README.md "$out/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "$out.zip" "$out" > /dev/null
+          else
+            tar czf "$out.tar.gz" "$out"
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            wfo-gpu-*.zip
+            wfo-gpu-*.tar.gz

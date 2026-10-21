@@ -1,0 +1,28 @@
+# Gold futures (COMEX), 1-minute bars. Same Globex session as equity index
+# futures, but the liquid core is the COMEX floor session.
+
+[data]
+bars = "data/gc_1m.bin"
+output = "output/gc"
+
+[instrument]
+symbol = "GC"
+tick_size = 0.10              # $0.10 per troy ounce
+tick_value = 10.00            # 100 oz contract
+spread_ticks = 2
+slippage_ticks = 1.0
+capital = 20000
+
+[session]
+model = "us_futures"
+core_hours = ["08:20", "11:00", "13:30"]   # open, morning/afternoon split, close (ET)
+# Core hours other than 09:30-16:00 switch off the session signals, which are
+# built on the equity-index session; the technical indicators still apply.
+halt_gap_minutes = 15
+
+[screen]
+start = "2019-01-01"
+end = "2020-01-01"
+
+[compute]
+device = "auto"

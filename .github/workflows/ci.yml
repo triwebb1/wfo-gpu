@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DWFO_GPU_WARNINGS_AS_ERRORS=ON
+          -DWFO_GPU_ENABLE_OPENCL=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure --parallel 4
+
+      - name: Smoke-test the CLI
+        shell: bash
+        run: |
+          exe=build/wfo-gpu
+          [ -f build/Release/wfo-gpu.exe ] && exe=build/Release/wfo-gpu.exe
+          "$exe" --version
+          "$exe" generate --out smoke.bin --days 3
+          "$exe" info --bars smoke.bin
+
+      - name: Smoke-test the pipeline (run, resume, reanalyze, detail)
+        shell: bash
+        run: |
+          exe=$PWD/build/wfo-gpu
+          [ -f build/Release/wfo-gpu.exe ] && exe=$PWD/build/Release/wfo-gpu.exe
+          bash tools/pipeline_smoke.sh "$exe" "$RUNNER_TEMP/pipeline-smoke"
+
+  opencl:
+    name: ubuntu / OpenCL (POCL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install POCL and OpenCL headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pocl-opencl-icd ocl-icd-opencl-dev opencl-headers clinfo
+          clinfo --list
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWFO_GPU_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (kernels run on the POCL CPU device)
+        env:
+          WFO_GPU_REQUIRE_OPENCL: "1"  # a missing device fails the GPU tests
+        run: ctest --test-dir build --output-on-failure --parallel 4
+
+  sanitizers:
+    name: ubuntu / ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DWFO_GPU_SANITIZE=ON
+          -DWFO_GPU_ENABLE_OPENCL=OFF
+          -DWFO_GPU_BUILD_BENCH=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build --output-on-failure --parallel 4
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: |
+          git ls-files '*.cpp' '*.h' | xargs pipx run --spec clang-format==18.1.8 clang-format --dry-run --Werror

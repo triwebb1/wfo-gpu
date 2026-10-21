@@ -1,0 +1,26 @@
+# A 24/7 market (crypto-style), 1-minute bars. No daily close, so positions
+# are never flattened by the clock; session days are UTC days. Core hours
+# follow the US equity session, when liquidity is deepest.
+
+[data]
+bars = "data/btc_1m.bin"
+output = "output/btc"
+
+[instrument]
+symbol = "BTC"
+tick_size = 1.0               # quote the contract in whole dollars
+tick_value = 1.0              # one unit of the asset per contract
+spread_ticks = 4
+slippage_ticks = 2.0
+capital = 100000
+
+[session]
+model = "continuous"
+core_hours = ["13:30", "16:30", "20:00"]   # UTC
+
+[screen]
+start = "2023-01-01"
+end = "2023-07-01"
+
+[compute]
+device = "auto"

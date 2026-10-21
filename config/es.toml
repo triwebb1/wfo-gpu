@@ -1,0 +1,30 @@
+# E-mini S&P 500 futures (CME), 30-second bars.
+
+[data]
+bars = "data/es_30s.bin"
+output = "output/es"
+
+[instrument]
+symbol = "ES"
+tick_size = 0.25
+tick_value = 12.50            # $50 per index point
+spread_ticks = 2
+slippage_ticks = 1.0
+capital = 15000
+
+[session]
+model = "us_futures"          # Globex 18:00-17:00 ET, core hours 09:30-16:00
+early_close_calendar = "cme_early_closes.csv"
+
+[screen]
+start = "2019-01-01"
+end = "2020-01-01"
+max_strategies = 2000000
+robustness_floor = 0.5
+
+[floors]
+min_trades = 100
+min_profit_factor = 1.0
+
+[compute]
+device = "auto"
