@@ -2862,7 +2862,7 @@ TEST(BacktestEngine, CompositeUnanimousDisagreement) {
 // ---------------------------------------------------------------------------
 TEST(Indicators, RollingVsAnchored) {
     // Use 500 30s bars so that even with 5-min aggregation (ratio=10)
-    // we get 50 TF bars, which exceeds EMA(5) warmup of 15.
+    // we get 50 TF bars, which exceeds the EMA(5)/EMA(8) warmup of 24.
     const int          N = 500;
     std::vector<float> closes(N);
     for (int i = 0; i < N; ++i) {
@@ -2872,8 +2872,8 @@ TEST(Indicators, RollingVsAnchored) {
     }
     auto bars_30s = make_bars_from_closes(closes);
 
-    // Rolling EMA(5) on 30s bars -- uses period 5 to keep warmup small
-    EMASMACross        ema_rolling(MAType::EMA, 5, MAType::EMA, 5);
+    // Rolling EMA(5)/EMA(8) cross on 30s bars -- short periods keep warmup small
+    EMASMACross        ema_rolling(MAType::EMA, 5, MAType::EMA, 8);
     std::vector<float> rolling_output(N * 2);
     ema_rolling.compute(bars_30s.data(), 0, N, rolling_output.data());
 
@@ -2901,17 +2901,17 @@ TEST(Indicators, RollingVsAnchored) {
         }
     }
 
-    // Anchored EMA(5) on 5-minute bars, broadcast back to 30s
-    EMASMACross        ema_anchored(MAType::EMA, 5, MAType::EMA, 5);
+    // Anchored EMA(5)/EMA(8) cross on 5-minute bars, broadcast back to 30s
+    EMASMACross        ema_anchored(MAType::EMA, 5, MAType::EMA, 8);
     std::vector<float> anchored_output(N * 2);
     compute_anchored(ema_anchored, tf_bars.data(), TF_BARS, completed_map.data(), 0, N,
                      anchored_output.data());
 
     // After both warmups are satisfied, rolling and anchored must differ.
-    // Rolling warmup = 3*5 = 15 (30s bars).
-    // Anchored warmup = 3*5 = 15 TF bars = 150 30s bars.
-    // Start comparing after bar 150 to ensure both are valid.
-    const int compare_start = 150;
+    // Rolling warmup = 3*8 = 24 (30s bars).
+    // Anchored warmup = 3*8 = 24 TF bars = 240 30s bars.
+    // Start comparing after bar 240 to ensure both are valid.
+    const int compare_start = 240;
     int       diffs         = 0;
     int       compared      = 0;
     for (int i = compare_start; i < N; ++i) {
@@ -2921,7 +2921,7 @@ TEST(Indicators, RollingVsAnchored) {
         }
     }
     EXPECT_GT(compared, 0) << "Should have some bars where both rolling and anchored are valid";
-    EXPECT_GT(diffs, 0) << "Rolling and anchored EMA(5) must produce different values "
+    EXPECT_GT(diffs, 0) << "Rolling and anchored EMA crosses must produce different values "
                            "(rolling updates every 30s, anchored only at 5m boundaries)";
 }
 

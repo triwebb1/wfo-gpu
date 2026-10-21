@@ -144,7 +144,7 @@ BacktestResult BacktestEngine::run_impl(const Bar* bars, const SessionInfo* sess
                                         const StrategyConfig& config, const CostModel& cost,
                                         int entry_lag, const EarlyTermination& early_term) const {
     assert(bar_start >= 0);
-    assert(bar_end > bar_start);
+    assert(bar_end >= bar_start);  // an empty range yields no trades
     assert(entry_lag >= 1);
     assert(config.num_indicators > 0 && config.num_indicators <= 4);
     // CostModel structural invariants. BacktestEngine is stateless so

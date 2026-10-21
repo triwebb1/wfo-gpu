@@ -27,7 +27,7 @@ std::string format_utc(int64_t ts_ns) {
     const int64_t     days = civil::floor_div(sec, civil::SEC_PER_DAY);
     const int64_t     tod  = sec - days * civil::SEC_PER_DAY;
     const civil::Date d    = civil::civil_from_days(days);
-    char              buf[32];
+    char              buf[64];
     std::snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d UTC", d.year, d.month, d.day,
                   static_cast<int>(tod / 3600), static_cast<int>(tod / 60 % 60),
                   static_cast<int>(tod % 60));
